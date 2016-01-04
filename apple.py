@@ -7,6 +7,8 @@ import re
 import pdfkit
 import StringIO
 from bs4 import BeautifulSoup
+import codecs
+import os
 
 # Quartz 2D Programming Guide
 # targetURL = 'https://developer.apple.com/library/ios/documentation/GraphicsImaging/Conceptual/drawingwithquartz2d/Introduction/Introduction.html#//apple_ref/doc/uid/TP40007533-SW1'
@@ -52,8 +54,19 @@ def outputPDF(fileNamePrefix, sourceURL):
     items = targetURL.split('/')
     outputPDFName = fileNamePrefix + '_' + items[len(items) - 1] + '.pdf'
 
-    # use pdfkit to generate the pdf
-    pdfkit.from_string(updatedHtml, outputPDFName)
+    # use pdfkit to generate the pdf - 这里修改encoding是为了避免显示奇怪的字符
+    # TODO python encoding这块还不是特别懂...
+    updatedHtml = updatedHtml.encode('latin-1')
+
+    # 这样用html文件中转一下,可以正确处理encoding的问题,如果使用pdfkit.from_string()也不能输出updatedHtml,估计是pdfkit内部错误
+    tempHtmlName = "./temp.html"
+    with codecs.open(tempHtmlName, "w") as f:
+        f.write(updatedHtml)
+
+    pdfkit.from_file(tempHtmlName, outputPDFName)
+
+    # clean up temp file
+    os.remove(tempHtmlName)
 
 # get prefix URL to replace ../ and get absolute URL
 def getPrefixURL(targetURL):
@@ -73,10 +86,10 @@ def getTargetURL(sourceURL):
 # Starting of this program
 
 # REQUIRED
-pagePrefix = 'PG_Quartz2D_'
+pagePrefix = 'PG_AudioSession_'
 
 # REQUIRED
-origURL = 'https://developer.apple.com/library/ios/documentation/GraphicsImaging/Conceptual/drawingwithquartz2d/Introduction/Introduction.html#//apple_ref/doc/uid/TP40007533-SW1'
+origURL = 'https://developer.apple.com/library/ios/documentation/Audio/Conceptual/AudioSessionProgrammingGuide/Introduction/Introduction.html'
 
 i = 0
 
@@ -87,16 +100,30 @@ i += 1
 # output other pages as PDFs
 prefixURL = getPrefixURL(getTargetURL(origURL))
 
+# TODO 这里看来比较好的做法,也是用splash先将页面渲染一次,然后再parse,能拿到比较准确的数据和结构
 htmlObj = requests.get(origURL)
 
 soup = BeautifulSoup(htmlObj.text, 'html.parser')
 
+# 记录已经处理过的URLs
+handled = []
+
 links = soup.find_all('span', {'class': 'content_text'})
 for link in links:
-    linkText = link.a["href"]
-    if linkText.startswith('../'):
-        otherItemURL = linkText.replace('../', prefixURL)
-        outputPDF(pagePrefix + str(i), otherItemURL)
-        i += 1
+    dataRenderVersion = link.a["data-renderer-version"]
+    print dataRenderVersion
+    if dataRenderVersion == '1':
+        linkText = link.a["href"]
+
+        if linkText not in handled:
+            handled.append(linkText)
+
+            relativePath = '../'
+            if linkText.startswith(relativePath):
+                # 直接替换最开头的../ 如果有多个 则忽略后面的 这样路径才是正确的
+                otherItemURL = prefixURL + linkText[len(relativePath):]
+                print otherItemURL
+                outputPDF(pagePrefix + str(i), otherItemURL)
+                i += 1
 
 print "COOOOOL..."
