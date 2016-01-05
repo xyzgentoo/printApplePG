@@ -86,44 +86,51 @@ def getTargetURL(sourceURL):
 # Starting of this program
 
 # REQUIRED
-pagePrefix = 'PG_AudioSession_'
+filenamePrefix = 'PG_AudioSession_'
 
-# REQUIRED
-origURL = 'https://developer.apple.com/library/ios/documentation/Audio/Conceptual/AudioSessionProgrammingGuide/Introduction/Introduction.html'
+# REQUIRED - 这里记录去掉域名的部分,方便和后面的统一
+origURL = '/library/ios/documentation/Audio/Conceptual/AudioSessionProgrammingGuide/Introduction/Introduction.html'
+
+# REQUIRED - DO NOT CHANGE FOR APPLE Programming Guides
+urlPrefix = 'https://developer.apple.com'
 
 i = 0
 
+# 记录已经处理过的URLs
+handled = [origURL]
+
 # output introduction page as PDF first
-outputPDF(pagePrefix + str(i), origURL)
+finalOrigURL = urlPrefix + origURL
+print 'orig: ' + finalOrigURL
+outputPDF(filenamePrefix + str(i), finalOrigURL)
 i += 1
 
 # output other pages as PDFs
-prefixURL = getPrefixURL(getTargetURL(origURL))
 
-# TODO 这里看来比较好的做法,也是用splash先将页面渲染一次,然后再parse,能拿到比较准确的数据和结构
-htmlObj = requests.get(origURL)
+# 这里看来比较好的做法,也是用splash先将页面渲染一次,然后再parse,能拿到比较准确的数据和结构
+
+# Start splash in terminal first, or it won't work
+# Steps
+# * Run = VBoxManage startvm default = in terminal to start Virtualbox machine named 'default'
+# * Run = eval "$(docker-machine env default)" = in terminal to init docker environment
+# * Run = docker run -p 5023:5023 -p 8050:8050 -p 8051:8051 scrapinghub/splash & = in terminal to start splash
+# * Run = docker-machine ip default = in terminal to get the IP of docker machine
+splashURL = 'http://192.168.99.100:8050/render.html?timeout=60&url=' + finalOrigURL
+htmlObj = requests.get(splashURL)
 
 soup = BeautifulSoup(htmlObj.text, 'html.parser')
 
-# 记录已经处理过的URLs
-handled = []
+sections = soup.find_all('span', {'class': 'sectionName'})
+# 直接忽略
+for section in sections:
+    link = getTargetURL(section.a['href'])
 
-links = soup.find_all('span', {'class': 'content_text'})
-for link in links:
-    dataRenderVersion = link.a["data-renderer-version"]
-    print dataRenderVersion
-    if dataRenderVersion == '1':
-        linkText = link.a["href"]
-
-        if linkText not in handled:
-            handled.append(linkText)
-
-            relativePath = '../'
-            if linkText.startswith(relativePath):
-                # 直接替换最开头的../ 如果有多个 则忽略后面的 这样路径才是正确的
-                otherItemURL = prefixURL + linkText[len(relativePath):]
-                print otherItemURL
-                outputPDF(pagePrefix + str(i), otherItemURL)
-                i += 1
+    # 这里得到的link都是不包含域名的版本
+    if link not in handled:
+        finalURL = urlPrefix + link
+        print 'new: ' + finalURL
+        outputPDF(filenamePrefix + str(i), finalURL)
+        i += 1
+        handled.append(link)
 
 print "COOOOOL..."
