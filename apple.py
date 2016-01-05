@@ -24,32 +24,19 @@ def outputPDF(fileNamePrefix, sourceURL):
     # load url into html text strings
     html = requests.get(targetURL)
 
-    # print '----------'
-    # print html.text
-    # print '=========='
-
-    # replace ../../../../../Resources/1163/CSS/screen.css with local modified print.css
-        # https://cdn.rawgit.com/xyzgentoo/printApplePG/master/print.css
-    # replace ../../../../../Resources/1163/CSS/feedback.css with local feedback.css
-        # https://cdn.rawgit.com/xyzgentoo/printApplePG/master/feedback.css
-
+    # 替换apple css为我自己修改后的css,为了输出print friendly样式的页面
     # <link rel="stylesheet" type="text/css" href="../../../../../Resources/1163/CSS/screen.css">
     updatedHtml = re.sub(r'(<link rel=\"stylesheet\" type=\"text/css\" href=\")(.+screen.css)(\">)', r'\1https://cdn.rawgit.com/xyzgentoo/printApplePG/master/print.css\3', html.text)
 
     updatedHtml = re.sub(r'(<link rel=\"stylesheet\" type=\"text/css\" href=\")(.+feedback.css)(\">)', r'\1https://cdn.rawgit.com/xyzgentoo/printApplePG/master/feedback1.css\3', updatedHtml)
 
     ## replace img src=".. with img src="https://developer.apple.com/library/ios/documentation/GraphicsImaging/Conceptual/drawingwithquartz2d
-    # items = targetURL.split('/')
-    # output = StringIO.StringIO()
-    #
-    # # 对应一个.. 然后最后一个不是path的一部分 于是-2
-    # for i in range(0, len(items) - 2):
-    #     output.write(items[i] + "/")
-    #
-    # imagePrefixURL = output.getvalue()
-    imagePrefixURL = getPrefixURL(targetURL)
+    resPrefixURL = getPrefixURL(targetURL)
 
-    updatedHtml = re.sub(r'(<img src=\"../)(\w+)', r'<img src="' + imagePrefixURL + r'\2', updatedHtml)
+    # 替换img的相对路径
+    updatedHtml = re.sub(r'(<img src=\"../)(\w+)', r'<img src="' + resPrefixURL + r'\2', updatedHtml)
+
+    # 注意 那几个js最好不要替换,要不里面也会报出找不到content的问题,pdfkit执行的时候就会报错了
 
     items = targetURL.split('/')
     outputPDFName = fileNamePrefix + '_' + items[len(items) - 1] + '.pdf'
@@ -57,22 +44,26 @@ def outputPDF(fileNamePrefix, sourceURL):
     # use pdfkit to generate the pdf - 这里修改encoding是为了避免显示奇怪的字符
     # TODO python encoding这块还不是特别懂...
     updatedHtml = updatedHtml.encode('latin-1')
+    # print updatedHtml
 
     # 这样用html文件中转一下,可以正确处理encoding的问题,如果使用pdfkit.from_string()也不能输出updatedHtml,估计是pdfkit内部错误
     tempHtmlName = "./temp.html"
     with codecs.open(tempHtmlName, "w") as f:
         f.write(updatedHtml)
 
+    # 从html文件生成pdf
     pdfkit.from_file(tempHtmlName, outputPDFName)
 
     # clean up temp file
     os.remove(tempHtmlName)
+    pass
 
 # get prefix URL to replace ../ and get absolute URL
 def getPrefixURL(targetURL):
     items = targetURL.split('/')
     output = StringIO.StringIO()
 
+    # 对应一个.. 然后最后一个不是path的一部分 于是-2 - 只把第一个../替换成URL中的部分,其他的相对路径在这个基础上就找到了
     for i in range(0, len(items) - 2):
         output.write(items[i] + "/")
 
@@ -86,10 +77,10 @@ def getTargetURL(sourceURL):
 # Starting of this program
 
 # REQUIRED
-filenamePrefix = 'PG_AudioSession_'
+filenamePrefix = 'PG_Quartz2D_'
 
 # REQUIRED - 这里记录去掉域名的部分,方便和后面的统一
-origURL = '/library/ios/documentation/Audio/Conceptual/AudioSessionProgrammingGuide/Introduction/Introduction.html'
+origURL = '/library/ios/documentation/GraphicsImaging/Conceptual/drawingwithquartz2d/Introduction/Introduction.html'
 
 # REQUIRED - DO NOT CHANGE FOR APPLE Programming Guides
 urlPrefix = 'https://developer.apple.com'
@@ -106,6 +97,8 @@ outputPDF(filenamePrefix + str(i), finalOrigURL)
 i += 1
 
 # output other pages as PDFs
+
+print 'start splashing...'
 
 # 这里看来比较好的做法,也是用splash先将页面渲染一次,然后再parse,能拿到比较准确的数据和结构
 
