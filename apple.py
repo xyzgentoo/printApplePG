@@ -45,7 +45,7 @@ def output_pdf(filename_prefix, source_url):
     # print updated_html_text
 
     # 这样用html文件中转一下,可以正确处理encoding的问题,如果使用pdfkit.from_string()也不能输出updatedHtml,估计是pdfkit内部错误
-    temp_html_file_name = "./temp.html"
+    temp_html_file_name = "temp.html"
     with codecs.open(temp_html_file_name, "w") as f:
         f.write(updated_html_text)
 
@@ -78,10 +78,10 @@ def get_target_url(source_url):
 # Starting of this program
 
 # REQUIRED
-filename_prefix = 'PG_Predicate_'
+filename_prefix = 'PG_Metal_'
 
 # REQUIRED - 这里记录去掉域名的部分,方便和后面的统一
-orig_url = '/library/ios/documentation/Cocoa/Conceptual/Predicates/AdditionalChapters/Introduction.html'
+orig_url = '/library/ios/documentation/Miscellaneous/Conceptual/MetalProgrammingGuide/Introduction/Introduction.html'
 
 # REQUIRED - DO NOT CHANGE FOR APPLE Programming Guides
 domain_prefix = 'https://developer.apple.com'
