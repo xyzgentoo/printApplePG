@@ -39,7 +39,7 @@ def output_pdf(file_name_prefix, source_url):
     # 替换img的相对路径
     updated_html_text = re.sub(r'(<img src=\"../)(\w+)', r'<img src="' + res_prefix_url + r'\2', updated_html_text)
 
-    # 替换img没有../的相对路径
+    # Note: 替换img没有../的相对路径
     res_prefix_url2 = get_prefix_url2(target_url)
     updated_html_text = re.sub(r'(<img src=\")(\w+)', r'<img src="' + res_prefix_url2 + r'\2', updated_html_text)
 
@@ -58,8 +58,12 @@ def output_pdf(file_name_prefix, source_url):
     with codecs.open(temp_html_file_name, "w") as f:
         f.write(updated_html_text)
 
-    # 从html文件生成pdf
-    pdfkit.from_file(temp_html_file_name, output_pdf_name)
+    try:
+        # 从html文件生成pdf
+        pdfkit.from_file(temp_html_file_name, output_pdf_name)
+    except IOError as err:
+        # Note: 有js资源找不到的话, 这里会抛出IOError
+        print "*** Well, IOError hits: " + str(err)
 
     # clean up temp file
     os.remove(temp_html_file_name)
@@ -150,7 +154,9 @@ for section in sections:
         if None == re.match(r'(\/.+Reference\/.*\/index.html)', link):
             # 这里得到的link都是不包含域名的版本
             if link not in handled:
-                final_url = domain_prefix + link
+                # Note: 这里也是相对路径, 没有../, 所以调整了下
+                prefix2 = get_prefix_url2(final_orig_url)
+                final_url = prefix2 + link
                 print 'new: ' + final_url
                 output_pdf(filename_prefix + str(i), final_url)
                 i += 1
