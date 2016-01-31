@@ -20,16 +20,19 @@ def output_pdf(file_name_prefix, source_url):
     # load url into html text strings
     html = requests.get(target_url)
 
-    # PG 样式1 -
-    # 替换apple css为我自己修改后的css,为了输出print friendly样式的页面
-    # <link rel="stylesheet" type="text/css" href="../../../../../Resources/1163/CSS/screen.css">
-    updated_html_text = re.sub(r'(<link rel=\"stylesheet\" type=\"text/css\" href=\")(.+screen.css)(\">)',
-                               r'\1https://cdn.rawgit.com/xyzgentoo/printApplePG/master/print.css\3', html.text)
-    updated_html_text = re.sub(r'(<link rel=\"stylesheet\" type=\"text/css\" href=\")(.+feedback.css)(\">)',
-                               r'\1https://cdn.rawgit.com/xyzgentoo/printApplePG/master/feedback1.css\3',
+    # PG 样式2 -
+    # 另一个系列的Programming guides
+    # 例如: https://developer.apple.com/library/ios/documentation/UserExperience/Conceptual/AutolayoutPG/index.html
+    # https://cdn.rawgit.com/xyzgentoo/printApplePG/master/print-style-1.5.1.css
+    # https://cdn.rawgit.com/xyzgentoo/printApplePG/master/print-feedback-1.5.1.css
+    updated_html_text = re.sub(r'(<link rel=\"stylesheet\" type=\"text/css\" href=\")(.+style-1.5.1.css)(\">)',
+                               r'\1https://cdn.rawgit.com/xyzgentoo/printApplePG/master/print-style-1.5.1.css\3',
+                               html.text)
+    updated_html_text = re.sub(r'(<link rel=\"stylesheet\" type=\"text/css\" href=\")(.+feedback-1.5.1.css)(\">)',
+                               r'\1https://cdn.rawgit.com/xyzgentoo/printApplePG/master/print-feedback-1.5.1.css\3',
                                updated_html_text)
 
-    # replace img src=".. with
+    ## replace img src=".. with
     # img src="https://developer.apple.com/library/ios/documentation/GraphicsImaging/Conceptual/drawingwithquartz2d
     res_prefix_url = get_prefix_url(target_url)
 
@@ -80,10 +83,10 @@ def get_target_url(source_url):
 # Starting of this program
 
 # REQUIRED
-filename_prefix = 'PG_OpenGLES_'
+filename_prefix = 'PG_AutoLayout_'
 
 # REQUIRED - 这里记录去掉域名的部分,方便和后面的统一
-orig_url = '/library/ios/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/Introduction/Introduction.html'
+orig_url = '/library/ios/documentation/UserExperience/Conceptual/AutolayoutPG/index.html'
 
 # REQUIRED - DO NOT CHANGE FOR APPLE Programming Guides
 domain_prefix = 'https://developer.apple.com'
@@ -116,26 +119,27 @@ html_obj = requests.get(splashURL)
 
 soup = BeautifulSoup(html_obj.text, 'html.parser')
 
-sections = soup.find_all('span', {'class': 'sectionName'})
+sections = soup.find_all('li', {'class': 'nav-chapter'})
 print "len(sections): " + str(len(sections))
 
 # 直接忽略
 for section in sections:
     link = get_target_url(section.a['href'])
+    print link
 
-    # 这里要过滤一下API Reference的链接
-    if None == re.match(r'(\/.+Reference\/.*\/index.html)', link):
-        # 这里得到的link都是不包含域名的版本
-        if link not in handled:
-            final_url = domain_prefix + link
-            print 'new: ' + final_url
-            output_pdf(filename_prefix + str(i), final_url)
-            i += 1
-            handled.append(link)
-
-            # 如果处理完版本更新的历史,就停止了,因为有些guides后面会跟着其他的链接,不支持的格式
-            if link.endswith('RevisionHistory.html'):
-                print '--- TO END ---'
-                break
+    # # 这里要过滤一下API Reference的链接
+    # if None == re.match(r'(\/.+Reference\/.*\/index.html)', link):
+    #     # 这里得到的link都是不包含域名的版本
+    #     if link not in handled:
+    #         final_url = domain_prefix + link
+    #         print 'new: ' + final_url
+    #         output_pdf(filename_prefix + str(i), final_url)
+    #         i += 1
+    #         handled.append(link)
+    #
+    #         # 如果处理完版本更新的历史,就停止了,因为有些guides后面会跟着其他的链接,不支持的格式
+    #         if link.endswith('RevisionHistory.html'):
+    #             print '--- TO END ---'
+    #             break
 
 print '*' * 50
