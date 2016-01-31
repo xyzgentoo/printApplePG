@@ -25,10 +25,10 @@ def output_pdf(file_name_prefix, source_url):
     # 例如: https://developer.apple.com/library/ios/documentation/UserExperience/Conceptual/AutolayoutPG/index.html
     # https://cdn.rawgit.com/xyzgentoo/printApplePG/master/print-style-1.5.1.css
     # https://cdn.rawgit.com/xyzgentoo/printApplePG/master/print-feedback-1.5.1.css
-    updated_html_text = re.sub(r'(<link rel=\"stylesheet\" type=\"text/css\" href=\")(.+style-1.5.1.css)(\">)',
+    updated_html_text = re.sub(r'(<link rel=\"stylesheet\" type=\"text/css\" href=\")(.+style-1.5.1.css)(\" />)',
                                r'\1https://cdn.rawgit.com/xyzgentoo/printApplePG/master/print-style-1.5.1.css\3',
                                html.text)
-    updated_html_text = re.sub(r'(<link rel=\"stylesheet\" type=\"text/css\" href=\")(.+feedback-1.5.1.css)(\">)',
+    updated_html_text = re.sub(r'(<link rel=\"stylesheet\" type=\"text/css\" href=\")(.+feedback-1.5.1.css)(\" />)',
                                r'\1https://cdn.rawgit.com/xyzgentoo/printApplePG/master/print-feedback-1.5.1.css\3',
                                updated_html_text)
 
@@ -38,6 +38,10 @@ def output_pdf(file_name_prefix, source_url):
 
     # 替换img的相对路径
     updated_html_text = re.sub(r'(<img src=\"../)(\w+)', r'<img src="' + res_prefix_url + r'\2', updated_html_text)
+
+    # 替换img没有../的相对路径
+    res_prefix_url2 = get_prefix_url2(target_url)
+    updated_html_text = re.sub(r'(<img src=\")(\w+)', r'<img src="' + res_prefix_url2 + r'\2', updated_html_text)
 
     # 注意 那几个js最好不要替换,要不里面也会报出找不到content的问题,pdfkit执行的时候就会报错了
 
@@ -69,6 +73,19 @@ def get_prefix_url(target_url):
 
     # 对应一个.. 然后最后一个不是path的一部分 于是-2 - 只把第一个../替换成URL中的部分,其他的相对路径在这个基础上就找到了
     for i in range(0, len(items) - 2):
+        output.write(items[i] + "/")
+
+    ret = output.getvalue()
+    return ret
+
+
+# get prefix URL to replace relative resource path
+def get_prefix_url2(target_url):
+    items = target_url.split('/')
+    output = StringIO.StringIO()
+
+    # 对应<img src="Art/layout_views_2x.png"这种非../类型的URL, 将域名前缀加上
+    for i in range(0, len(items) - 1):
         output.write(items[i] + "/")
 
     ret = output.getvalue()
@@ -119,27 +136,29 @@ html_obj = requests.get(splashURL)
 
 soup = BeautifulSoup(html_obj.text, 'html.parser')
 
+# 这里过滤出章节的地方跟样式 1不同
 sections = soup.find_all('li', {'class': 'nav-chapter'})
 print "len(sections): " + str(len(sections))
 
 # 直接忽略
 for section in sections:
     link = get_target_url(section.a['href'])
-    print link
 
-    # # 这里要过滤一下API Reference的链接
-    # if None == re.match(r'(\/.+Reference\/.*\/index.html)', link):
-    #     # 这里得到的link都是不包含域名的版本
-    #     if link not in handled:
-    #         final_url = domain_prefix + link
-    #         print 'new: ' + final_url
-    #         output_pdf(filename_prefix + str(i), final_url)
-    #         i += 1
-    #         handled.append(link)
-    #
-    #         # 如果处理完版本更新的历史,就停止了,因为有些guides后面会跟着其他的链接,不支持的格式
-    #         if link.endswith('RevisionHistory.html'):
-    #             print '--- TO END ---'
-    #             break
+    # 这种样式的PG当前打开的页面, href是#***样式的, 没有前面的url path
+    if link != "":
+        # 这里要过滤一下API Reference的链接
+        if None == re.match(r'(\/.+Reference\/.*\/index.html)', link):
+            # 这里得到的link都是不包含域名的版本
+            if link not in handled:
+                final_url = domain_prefix + link
+                print 'new: ' + final_url
+                output_pdf(filename_prefix + str(i), final_url)
+                i += 1
+                handled.append(link)
+
+                # 如果处理完版本更新的历史,就停止了,因为有些guides后面会跟着其他的链接,不支持的格式
+                if link.endswith('RevisionHistory.html'):
+                    print '--- TO END ---'
+                    break
 
 print '*' * 50
