@@ -78,10 +78,10 @@ def get_target_url(source_url):
 # Starting of this program
 
 # REQUIRED
-filename_prefix = 'PG_Metal_'
+filename_prefix = 'PG_AutoLayout_'
 
 # REQUIRED - 这里记录去掉域名的部分,方便和后面的统一
-orig_url = '/library/ios/documentation/Miscellaneous/Conceptual/MetalProgrammingGuide/Introduction/Introduction.html'
+orig_url = '/library/ios/documentation/UserExperience/Conceptual/AutolayoutPG/index.html'
 
 # REQUIRED - DO NOT CHANGE FOR APPLE Programming Guides
 domain_prefix = 'https://developer.apple.com'
