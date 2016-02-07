@@ -29,12 +29,19 @@ def output_pdf(file_name_prefix, source_url):
                                r'\1https://cdn.rawgit.com/xyzgentoo/printApplePG/master/feedback1.css\3',
                                updated_html_text)
 
-    # replace img src=".. with
-    # img src="https://developer.apple.com/library/ios/documentation/GraphicsImaging/Conceptual/drawingwithquartz2d
-    res_prefix_url = get_prefix_url(target_url)
+    # 先替换相对路径中没有..的img src, 例如: <img src="Art/facets_of_accessibility_2x.png"
+    res_upper_one_level_prefix_url = get_upper_prefix_url(target_url, 1)
+    updated_html_text = re.sub(r'(<img src=\")(\w+)',
+                               r'<img src="' + res_upper_one_level_prefix_url + r'\2',
+                               updated_html_text)
+
+    # 再替换../这样的路径, 例如: <img src="../Art/test_2x.png"
+    res_upper_two_levels_prefix_url = get_upper_prefix_url(target_url, 2)
 
     # 替换img的相对路径
-    updated_html_text = re.sub(r'(<img src=\"../)(\w+)', r'<img src="' + res_prefix_url + r'\2', updated_html_text)
+    updated_html_text = re.sub(r'(<img src=\"../)(\w+)',
+                               r'<img src="' + res_upper_two_levels_prefix_url + r'\2',
+                               updated_html_text)
 
     # 注意 那几个js最好不要替换,要不里面也会报出找不到content的问题,pdfkit执行的时候就会报错了
 
@@ -60,12 +67,12 @@ def output_pdf(file_name_prefix, source_url):
 
 
 # get prefix URL to replace ../ and get absolute URL
-def get_prefix_url(target_url):
+def get_upper_prefix_url(target_url, upper_levels_count):
     items = target_url.split('/')
     output = StringIO.StringIO()
 
     # 对应一个.. 然后最后一个不是path的一部分 于是-2 - 只把第一个../替换成URL中的部分,其他的相对路径在这个基础上就找到了
-    for i in range(0, len(items) - 2):
+    for i in range(0, len(items) - upper_levels_count):
         output.write(items[i] + "/")
 
     ret = output.getvalue()
@@ -80,10 +87,10 @@ def get_target_url(source_url):
 # Starting of this program
 
 # REQUIRED
-filename_prefix = 'PG_OpenGLES_'
+filename_prefix = 'G_CocoaCoreCompetencies_'
 
 # REQUIRED - 这里记录去掉域名的部分,方便和后面的统一
-orig_url = '/library/ios/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/Introduction/Introduction.html'
+orig_url = '/library/ios/documentation/General/Conceptual/DevPedia-CocoaCore/Accessibility.html'
 
 # REQUIRED - DO NOT CHANGE FOR APPLE Programming Guides
 domain_prefix = 'https://developer.apple.com'
